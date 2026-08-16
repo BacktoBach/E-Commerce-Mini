@@ -1,0 +1,33 @@
+{
+  "name": "nightfood",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "NightFood full-stack food delivery platform",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=11"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @nightfood/backend --filter @nightfood/frontend dev",
+    "dev:backend": "pnpm --filter @nightfood/backend dev",
+    "dev:frontend": "pnpm --filter @nightfood/frontend dev",
+    "build": "pnpm -r build",
+    "check": "pnpm -r check",
+    "test": "pnpm -r test",
+    "db:up": "docker compose up -d database",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f database",
+    "db:generate": "pnpm --filter @nightfood/backend prisma:generate",
+    "db:migrate": "pnpm --filter @nightfood/backend prisma:migrate",
+    "db:deploy": "pnpm --filter @nightfood/backend prisma:deploy",
+    "db:studio": "pnpm --filter @nightfood/backend prisma:studio"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.1",
+    "prettier": "^3.9.6",
+    "typescript-eslint": "^8.67.0"
+  }
+}

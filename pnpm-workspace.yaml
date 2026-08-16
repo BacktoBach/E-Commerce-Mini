@@ -1,0 +1,14 @@
+packages:
+  - "backend"
+  - "frontend"
+
+allowBuilds:
+  "@prisma/engines": true
+  esbuild: true
+  prisma: true
+
+minimumReleaseAgeExclude:
+  - fastify@5.12.0
+
+overrides:
+  rolldown: 1.2.0
