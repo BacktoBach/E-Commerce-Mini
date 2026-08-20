@@ -1,12 +1,14 @@
 import { useState, type SyntheticEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AuthCard } from "../../components/auth/AuthCard";
+import { authFlowStorage } from "../../services/authFlowStorage";
 import { authService } from "../../services/authService";
+import { authErrorMessage } from "../../utils/authError";
 
 export default function ForgotPasswordPage() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>) => {
@@ -15,10 +17,15 @@ export default function ForgotPasswordPage() {
     setIsSubmitting(true);
 
     try {
-      await authService.requestPasswordReset(email.trim());
-      setSent(true);
+      const normalizedEmail = email.trim().toLowerCase();
+      await authService.requestPasswordReset(normalizedEmail);
+      authFlowStorage.start("recovery", normalizedEmail);
+      void navigate("/auth/verify-recovery", {
+        replace: true,
+        state: { email: normalizedEmail }
+      });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Không thể gửi email khôi phục.");
+      setError(authErrorMessage(caught, "Không thể gửi mã khôi phục."));
     } finally {
       setIsSubmitting(false);
     }
@@ -28,7 +35,7 @@ export default function ForgotPasswordPage() {
     <AuthCard
       eyebrow="KHÔI PHỤC TÀI KHOẢN"
       title="Quên mật khẩu"
-      description="Nhập email đã đăng ký. NightFood sẽ gửi liên kết đặt lại mật khẩu nếu tài khoản tồn tại."
+      description="Nhập email đã đăng ký. NightFood sẽ gửi mã 6 số nếu tài khoản tồn tại."
       footer={<Link to="/auth/login">Quay lại đăng nhập</Link>}
     >
       <form className="auth-form" onSubmit={(event) => void handleSubmit(event)}>
@@ -46,14 +53,8 @@ export default function ForgotPasswordPage() {
         </label>
 
         {error ? <p className="form-message form-message--error">{error}</p> : null}
-        {sent ? (
-          <p className="form-message form-message--success">
-            Yêu cầu đã được ghi nhận. Hãy kiểm tra cả Inbox và Spam.
-          </p>
-        ) : null}
-
-        <button className="button button--primary" disabled={isSubmitting || sent} type="submit">
-          {isSubmitting ? "Đang gửi..." : sent ? "Đã gửi email" : "Gửi liên kết khôi phục"}
+        <button className="button button--primary" disabled={isSubmitting} type="submit">
+          {isSubmitting ? "Đang gửi..." : "Gửi mã khôi phục"}
         </button>
       </form>
     </AuthCard>

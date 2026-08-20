@@ -2,6 +2,7 @@ import { useState, type SyntheticEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthCard } from "../../components/auth/AuthCard";
 import { authService } from "../../services/authService";
+import { authErrorMessage } from "../../utils/authError";
 
 interface LocationState {
   from?: { pathname?: string };
@@ -28,7 +29,7 @@ export default function SignInPage() {
       await authService.signInWithPassword({ email: email.trim(), password });
       void navigate(destination, { replace: true });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Không thể đăng nhập lúc này.");
+      setError(authErrorMessage(caught, "Không thể đăng nhập lúc này."));
     } finally {
       setIsSubmitting(false);
     }
@@ -41,7 +42,7 @@ export default function SignInPage() {
     try {
       await authService.signInWithGoogle();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Không thể đăng nhập bằng Google.");
+      setError(authErrorMessage(caught, "Không thể đăng nhập bằng Google."));
       setIsSubmitting(false);
     }
   };

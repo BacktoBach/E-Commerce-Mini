@@ -32,7 +32,6 @@ export const authService = {
       email,
       password,
       options: {
-        emailRedirectTo: applicationUrl("/auth/callback"),
         ...(fullName?.trim() ? { data: { full_name: fullName.trim() } } : {})
       }
     });
@@ -55,10 +54,25 @@ export const authService = {
   },
 
   async requestPasswordReset(email: string): Promise<void> {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: applicationUrl("/auth/reset-password")
-    });
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) throw error;
+  },
+
+  async verifyEmailOtp(email: string, token: string) {
+    const { data, error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
+    if (error) throw error;
+    return data;
+  },
+
+  async resendSignupOtp(email: string): Promise<void> {
+    const { error } = await supabase.auth.resend({ type: "signup", email });
+    if (error) throw error;
+  },
+
+  async verifyRecoveryOtp(email: string, token: string) {
+    const { data, error } = await supabase.auth.verifyOtp({ email, token, type: "recovery" });
+    if (error) throw error;
+    return data;
   },
 
   async updatePassword(password: string): Promise<void> {

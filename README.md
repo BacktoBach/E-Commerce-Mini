@@ -78,15 +78,20 @@ Quy ước mở rộng frontend:
 Luồng xác thực:
 
 ```text
-Email/Password hoặc Google -> Supabase Auth -> access token
-                                         -> Axios Bearer token
-                                         -> NightFood backend
-                                         -> xác minh Supabase claims
-                                         -> public.users (hồ sơ nghiệp vụ)
+Đăng ký Email/Password -> OTP 6 số -> Supabase Auth -> access token
+Quên mật khẩu          -> OTP 6 số -> recovery session -> đổi mật khẩu
+Google OAuth           -> callback -> Supabase Auth -> access token
+                                                    -> Axios Bearer token
+                                                    -> NightFood backend
+                                                    -> xác minh Supabase claims
+                                                    -> public.users
 ```
 
 Access token do Supabase quản lý và không được sao chép vào Redux. Redux chỉ giữ trạng thái đăng nhập
 và hồ sơ tối thiểu cần cho giao diện.
+
+Hai email template OTP và checklist kiểm thử được ghi tại
+[docs/SUPABASE_AUTH_OTP.md](./docs/SUPABASE_AUTH_OTP.md).
 
 Khi thêm nghiệp vụ backend, giữ cùng tên xuyên qua từng layer, ví dụ:
 

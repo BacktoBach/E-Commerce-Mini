@@ -292,6 +292,16 @@ h1 {
   background: rgb(255 255 255 / 6%);
 }
 
+.button--text {
+  min-height: 40px;
+  color: #fb923c;
+  background: transparent;
+}
+
+a.button {
+  text-decoration: none;
+}
+
 .button--google span {
   display: grid;
   width: 24px;
@@ -363,6 +373,39 @@ h1 {
   color: #cbd5e1;
 }
 
+.otp-input {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.otp-input input {
+  width: 100%;
+  min-width: 0;
+  min-height: 58px;
+  padding: 0;
+  border: 1px solid rgb(148 163 184 / 28%);
+  border-radius: 12px;
+  outline: none;
+  color: #fff;
+  background: rgb(2 6 23 / 70%);
+  font-size: clamp(1.25rem, 5vw, 1.7rem);
+  font-weight: 800;
+  text-align: center;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.otp-input input:focus {
+  border-color: #fb923c;
+  box-shadow: 0 0 0 3px rgb(251 146 60 / 14%);
+}
+
+.otp-input input:disabled {
+  opacity: 0.58;
+}
+
 .spinner {
   width: 20px;
   height: 20px;
@@ -429,5 +472,14 @@ h1 {
   .profile-list div {
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+
+  .otp-input {
+    gap: 7px;
+  }
+
+  .otp-input input {
+    min-height: 52px;
+    border-radius: 10px;
   }
 }

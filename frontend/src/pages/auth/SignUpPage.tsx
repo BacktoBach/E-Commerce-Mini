@@ -1,21 +1,22 @@
 import { useState, type SyntheticEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AuthCard } from "../../components/auth/AuthCard";
+import { authFlowStorage } from "../../services/authFlowStorage";
 import { authService } from "../../services/authService";
+import { authErrorMessage } from "../../utils/authError";
 
 export default function SignUpPage() {
+  const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
-    setMessage(null);
 
     if (password !== confirmPassword) {
       setError("Mật khẩu xác nhận không khớp.");
@@ -24,18 +25,23 @@ export default function SignUpPage() {
 
     setIsSubmitting(true);
     try {
+      const normalizedEmail = email.trim().toLowerCase();
       const data = await authService.signUp({
-        email: email.trim(),
+        email: normalizedEmail,
         password,
         fullName: fullName.trim()
       });
-      setMessage(
-        data.session
-          ? "Tài khoản đã được tạo và đăng nhập thành công."
-          : "Đã gửi email xác thực. Hãy kiểm tra hộp thư trước khi đăng nhập."
-      );
+      if (data.session) {
+        void navigate("/account", { replace: true });
+      } else {
+        authFlowStorage.start("signup", normalizedEmail);
+        void navigate("/auth/verify-email", {
+          replace: true,
+          state: { email: normalizedEmail }
+        });
+      }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Không thể tạo tài khoản lúc này.");
+      setError(authErrorMessage(caught, "Không thể tạo tài khoản lúc này."));
     } finally {
       setIsSubmitting(false);
     }
@@ -104,8 +110,6 @@ export default function SignUpPage() {
         </label>
 
         {error ? <p className="form-message form-message--error">{error}</p> : null}
-        {message ? <p className="form-message form-message--success">{message}</p> : null}
-
         <button className="button button--primary" disabled={isSubmitting} type="submit">
           {isSubmitting ? "Đang tạo tài khoản..." : "Đăng ký"}
         </button>

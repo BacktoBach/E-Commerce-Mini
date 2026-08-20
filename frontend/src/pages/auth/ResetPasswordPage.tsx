@@ -1,16 +1,41 @@
-import { useState, type SyntheticEvent } from "react";
+import { useEffect, useState, type SyntheticEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthCard } from "../../components/auth/AuthCard";
-import { useAppSelector } from "../../redux/hooks";
+import { authFlowStorage } from "../../services/authFlowStorage";
 import { authService } from "../../services/authService";
+import { authErrorMessage } from "../../utils/authError";
+
+type RecoveryStatus = "checking" | "ready" | "invalid";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
-  const authStatus = useAppSelector((state) => state.auth.status);
+  const [recoveryStatus, setRecoveryStatus] = useState<RecoveryStatus>("checking");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!authFlowStorage.hasValidRecovery()) {
+      setRecoveryStatus("invalid");
+      return;
+    }
+
+    void authService
+      .getSession()
+      .then((session) => {
+        if (active) setRecoveryStatus(session ? "ready" : "invalid");
+      })
+      .catch(() => {
+        if (active) setRecoveryStatus("invalid");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -24,10 +49,11 @@ export default function ResetPasswordPage() {
     setIsSubmitting(true);
     try {
       await authService.updatePassword(password);
+      authFlowStorage.clearRecovery();
       await authService.signOut();
       void navigate("/auth/login", { replace: true, state: { passwordUpdated: true } });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Không thể cập nhật mật khẩu.");
+      setError(authErrorMessage(caught, "Không thể cập nhật mật khẩu."));
     } finally {
       setIsSubmitting(false);
     }
@@ -37,12 +63,17 @@ export default function ResetPasswordPage() {
     <AuthCard
       eyebrow="BẢO MẬT TÀI KHOẢN"
       title="Đặt mật khẩu mới"
-      description="Liên kết khôi phục phải còn hiệu lực để bạn thay đổi mật khẩu."
+      description="Mã khôi phục phải được xác thực trước khi bạn thay đổi mật khẩu."
       footer={<Link to="/auth/login">Quay lại đăng nhập</Link>}
     >
-      {authStatus === "unauthenticated" ? (
+      {recoveryStatus === "checking" ? (
+        <div className="auth-progress" role="status">
+          <span className="spinner" aria-hidden="true" />
+          Đang kiểm tra phiên khôi phục...
+        </div>
+      ) : recoveryStatus === "invalid" ? (
         <p className="form-message form-message--error">
-          Phiên khôi phục không hợp lệ hoặc đã hết hạn. Hãy yêu cầu một liên kết mới.
+          Phiên khôi phục không hợp lệ hoặc đã hết hạn. Hãy yêu cầu một mã mới.
         </p>
       ) : (
         <form className="auth-form" onSubmit={(event) => void handleSubmit(event)}>
@@ -73,11 +104,7 @@ export default function ResetPasswordPage() {
 
           {error ? <p className="form-message form-message--error">{error}</p> : null}
 
-          <button
-            className="button button--primary"
-            disabled={isSubmitting || authStatus === "initializing"}
-            type="submit"
-          >
+          <button className="button button--primary" disabled={isSubmitting} type="submit">
             {isSubmitting ? "Đang cập nhật..." : "Cập nhật mật khẩu"}
           </button>
         </form>
