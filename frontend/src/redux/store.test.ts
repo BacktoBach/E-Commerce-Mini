@@ -5,6 +5,7 @@ import { store } from "./store";
 describe("Redux store", () => {
   it("registers the NightFood API state", () => {
     expect(store.getState()).toHaveProperty(baseApi.reducerPath);
+    expect(store.getState().auth.status).toBe("initializing");
   });
 
   it("can reset the API cache", () => {

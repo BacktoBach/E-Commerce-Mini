@@ -1,5 +1,10 @@
 export type ErrorCode =
-  "VALIDATION_ERROR" | "DATABASE_UNAVAILABLE" | "NOT_FOUND" | "INTERNAL_ERROR";
+  | "VALIDATION_ERROR"
+  | "UNAUTHORIZED"
+  | "FORBIDDEN"
+  | "DATABASE_UNAVAILABLE"
+  | "NOT_FOUND"
+  | "INTERNAL_ERROR";
 
 export class AppError extends Error {
   public constructor(
