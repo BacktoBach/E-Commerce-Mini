@@ -7,10 +7,8 @@ export interface AppConfig {
   port: number;
   logLevel: LogLevel;
   databaseUrl: string;
-  accessTokenSecret: string;
-  refreshTokenPepper: string;
-  accessTokenTtlMinutes: number;
-  refreshTokenTtlDays: number;
+  supabaseUrl: string;
+  supabasePublishableKey: string;
   corsOrigins: string[];
 }
 
@@ -49,25 +47,14 @@ function oneOf<T extends string>(
 }
 
 export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
-  const accessTokenSecret = required(source, "ACCESS_TOKEN_SECRET");
-  const refreshTokenPepper = required(source, "REFRESH_TOKEN_PEPPER");
-  if (accessTokenSecret.length < 32) {
-    throw new Error("ACCESS_TOKEN_SECRET must be at least 32 characters");
-  }
-  if (refreshTokenPepper.length < 32) {
-    throw new Error("REFRESH_TOKEN_PEPPER must be at least 32 characters");
-  }
-
   return {
     appEnv: oneOf(source, "APP_ENV", "development", ["development", "test", "production"]),
     host: source.HOST?.trim() || "0.0.0.0",
     port: integer(source, "PORT", 5000, 1, 65_535),
     logLevel: oneOf(source, "LOG_LEVEL", "info", ["debug", "info", "warn", "error"]),
     databaseUrl: required(source, "DATABASE_URL"),
-    accessTokenSecret,
-    refreshTokenPepper,
-    accessTokenTtlMinutes: integer(source, "ACCESS_TOKEN_TTL_MINUTES", 30, 5, 120),
-    refreshTokenTtlDays: integer(source, "REFRESH_TOKEN_TTL_DAYS", 14, 1, 90),
+    supabaseUrl: required(source, "SUPABASE_URL").replace(/\/$/, ""),
+    supabasePublishableKey: required(source, "SUPABASE_PUBLISHABLE_KEY"),
     corsOrigins: (source.CORS_ORIGINS || "")
       .split(",")
       .map((origin) => origin.trim())

@@ -2,6 +2,8 @@ import { Type } from "typebox";
 
 export const ErrorCodeSchema = Type.Union([
   Type.Literal("VALIDATION_ERROR"),
+  Type.Literal("UNAUTHORIZED"),
+  Type.Literal("FORBIDDEN"),
   Type.Literal("DATABASE_UNAVAILABLE"),
   Type.Literal("NOT_FOUND"),
   Type.Literal("INTERNAL_ERROR")

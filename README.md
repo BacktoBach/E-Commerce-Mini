@@ -6,7 +6,7 @@ Website đặt món và giao đồ ăn đêm tại Đà Nẵng.
 
 ```text
 E-Commerce Mini/
-|-- backend/                 # Fastify + Prisma + Supabase PostgreSQL
+|-- backend/                 # Fastify + Prisma + Supabase Auth/PostgreSQL
 |   |-- prisma/              # Schema và migrations
 |   |-- src/
 |   |   |-- routes/          # Khai báo endpoint
@@ -14,7 +14,7 @@ E-Commerce Mini/
 |   |   |-- services/        # Xử lý nghiệp vụ và gọi Prisma
 |   |   |-- schemas/         # Request/response schema
 |   |   |-- middlewares/     # Middleware và error handler
-|   |   |-- config/          # Env và Prisma
+|   |   |-- config/          # Env, Prisma và Supabase Auth client
 |   |   `-- utils/
 |   `-- tests/
 |-- frontend/                # React + Redux Toolkit
@@ -24,12 +24,15 @@ E-Commerce Mini/
 |       |-- pages/           # Các trang gắn với URL
 |       |-- providers/       # Global providers của React
 |       |-- redux/
+|       |   |-- slices/      # Client state theo nghiệp vụ
 |       |   |-- hooks.ts     # Typed Redux hooks
 |       |   `-- store.ts     # Redux store và middleware
 |       |-- routes/          # Khai báo React Router
 |       |-- services/        # Axios dùng chung và API theo nghiệp vụ
 |       |   |-- api.ts       # Axios client + RTK Query base API
-|       |   `-- healthService.ts
+|       |   |-- authService.ts
+|       |   |-- profileService.ts
+|       |   `-- supabaseClient.ts
 |       |-- types/           # Kiểu response và kiểu dùng chung
 |       |-- App.tsx          # Ghép providers và router
 |       `-- main.tsx         # Gắn React vào index.html
@@ -44,11 +47,12 @@ Backend giữ cấu trúc cơ bản:
 route -> controller -> service -> Prisma -> Supabase
 ```
 
-Frontend dùng Redux Toolkit. Các request đến backend được quản lý bằng RTK Query,
-không gọi trực tiếp bảng Supabase từ trình duyệt.
+Frontend dùng Redux Toolkit. Dữ liệu nghiệp vụ đi qua NightFood backend; frontend chỉ gọi trực tiếp
+Supabase Auth cho đăng ký, đăng nhập, Google OAuth, khôi phục mật khẩu và quản lý phiên. Frontend không
+truy cập trực tiếp các bảng `public` trong Supabase.
 
 ```text
-Page -> RTK Query hook -> feature service -> api.ts (Axios) -> NightFood backend
+Page -> feature service/RTK Query -> api.ts (Axios) -> NightFood backend
 ```
 
 Luồng khởi động frontend theo cùng form với Group8:
@@ -70,6 +74,24 @@ Quy ước mở rộng frontend:
 - Provider toàn cục đặt trong `providers/`; kiểu dữ liệu và hàm tiện ích dùng chung lần lượt đặt trong
   `types/` và `utils/` khi bắt đầu phát sinh nhu cầu.
 - Không tạo sẵn thư mục rỗng. Thư mục mới chỉ được thêm khi có code thực tế.
+
+Luồng xác thực:
+
+```text
+Đăng ký Email/Password -> OTP 6 số -> Supabase Auth -> access token
+Quên mật khẩu          -> OTP 6 số -> recovery session -> đổi mật khẩu
+Google OAuth           -> callback -> Supabase Auth -> access token
+                                                    -> Axios Bearer token
+                                                    -> NightFood backend
+                                                    -> xác minh Supabase claims
+                                                    -> public.users
+```
+
+Access token do Supabase quản lý và không được sao chép vào Redux. Redux chỉ giữ trạng thái đăng nhập
+và hồ sơ tối thiểu cần cho giao diện.
+
+Hai email template OTP và checklist kiểm thử được ghi tại
+[docs/SUPABASE_AUTH_OTP.md](./docs/SUPABASE_AUTH_OTP.md).
 
 Khi thêm nghiệp vụ backend, giữ cùng tên xuyên qua từng layer, ví dụ:
 
@@ -95,6 +117,7 @@ Quy ước backend:
 - Fastify
 - Prisma ORM
 - Supabase PostgreSQL
+- Supabase Auth (Email/Password, Google OAuth, email confirmation, password recovery)
 - Swagger/OpenAPI
 - Vitest
 
@@ -114,8 +137,8 @@ Backend dùng file `backend/.env`:
 
 ```env
 DATABASE_URL=postgresql://prisma.PROJECT_REF:PASSWORD@REGION.pooler.supabase.com:5432/postgres
-ACCESS_TOKEN_SECRET=replace_with_at_least_32_random_characters
-REFRESH_TOKEN_PEPPER=replace_with_at_least_32_random_characters
+SUPABASE_URL=https://PROJECT_REF.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx
 CORS_ORIGINS=http://localhost:5173
 ```
 
@@ -123,6 +146,8 @@ Frontend dùng file `frontend/.env` nếu cần thay URL backend:
 
 ```env
 VITE_API_URL=http://localhost:5000
+VITE_SUPABASE_URL=https://PROJECT_REF.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx
 ```
 
 Hai file `.env` đều được gitignore. Chỉ commit các file `.env.example`.
@@ -151,11 +176,14 @@ pnpm dev:frontend
 
 Supabase là database chính. Các bảng hiện có:
 
-- `users`
-- `auth_accounts`
-- `sessions`
-- `addresses`
+- `auth.users`: tài khoản, identity và session do Supabase Auth quản lý.
+- `public.users`: hồ sơ và role nghiệp vụ NightFood; dùng cùng UUID với `auth.users`.
+- `public.addresses`: sổ địa chỉ giao hàng.
 - `_prisma_migrations`
+
+Các bảng auth tự xây trước đây (`public.auth_accounts`, `public.sessions`) và cột
+`public.users.password_hash` được migration Supabase Auth loại bỏ. Backend không lưu mật khẩu,
+refresh token hoặc Google client secret.
 
 RLS đã được bật trong Supabase. Frontend không được giữ database password, service-role
 key hoặc kết nối trực tiếp PostgreSQL.
@@ -165,6 +193,9 @@ Khi có migration mới:
 ```bash
 pnpm db:deploy
 ```
+
+Chỉ chạy deploy migration sau khi đã kiểm tra backup/dữ liệu trên môi trường đích. Migration
+`20260820000100_supabase_auth_foundation` có thao tác xóa hai bảng auth cũ.
 
 PostgreSQL trong `compose.yaml` chỉ là phương án chạy local dự phòng, không cần khởi
 động khi đang sử dụng Supabase.

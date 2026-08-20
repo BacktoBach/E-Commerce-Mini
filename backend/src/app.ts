@@ -3,14 +3,18 @@ import helmet from "@fastify/helmet";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import type { TypeBoxTypeProvider } from "@fastify/type-provider-typebox";
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyInstance, type preHandlerAsyncHookHandler } from "fastify";
 import type { AppConfig } from "./config/env.js";
+import type { AuthController } from "./controllers/auth.controller.js";
 import type { HealthController } from "./controllers/health.controller.js";
 import { registerErrorHandler } from "./middlewares/error-handler.js";
+import { registerAuthRoutes } from "./routes/auth.routes.js";
 import { registerHealthRoutes } from "./routes/health.routes.js";
 
 export interface CreateAppOptions {
   config: AppConfig;
+  authController: AuthController;
+  authenticate: preHandlerAsyncHookHandler;
   healthController: HealthController;
   logger?: boolean;
 }
@@ -28,8 +32,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
                 "req.headers.cookie",
                 "request.headers.authorization",
                 "config.databaseUrl",
-                "config.accessTokenSecret",
-                "config.refreshTokenPepper"
+                "config.supabasePublishableKey"
               ],
               censor: "[REDACTED]"
             }
@@ -55,6 +58,11 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         title: "NightFood API",
         description: "Backend API for the NightFood food delivery platform.",
         version: "0.1.0"
+      },
+      components: {
+        securitySchemes: {
+          bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" }
+        }
       }
     }
   });
@@ -65,6 +73,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
 
   registerErrorHandler(app);
   registerHealthRoutes(app, options.healthController);
+  registerAuthRoutes(app, options.authController, options.authenticate);
 
   return app;
 }
